@@ -1,0 +1,140 @@
+#!/bin/bash
+
+# Document how to use this script and what it is for
+help() {
+  cat <<EOF
+deploy_new_demo.sh
+------------------
+
+This script allows to automatically create a new demo page on the gh-pages
+branch.
+/!\\ This script deploy a non-minified version.
+
+To use it:
+
+  1. Check that you're on the branch you want to deploy and that this branch is
+     clean (has no staged files or diff)
+
+  2. Call this script with the wanted directory name in argument (e.g.
+     \`./deploy_new_demo my_new_page\`).
+     Some user interactions will be needed to avoid doing unwanted commits.
+
+  3. That's it!
+     A commit with the new directory should have been pushed to the gh-pages.
+
+Usage: $0 [OPTIONS] <BRANCH>
+
+Options:
+  -h, --help       Show this help message and exit
+EOF
+}
+
+# Exit on error, undefined variable and error in pipes
+set -euo pipefail
+
+# Check for --help flag
+for arg in "$@"; do
+  case "$arg" in
+  -h|--help) help; exit 0;;
+  esac
+done
+
+current_branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+deployed_branch=$1
+
+# Do not normalize path check for dirty "." or "/"
+# But as only people with write access on the gh-pages branch can do harm,
+# that's good enough
+if [ -z "$deployed_branch" ] ||
+  [ "$deployed_branch" == "" ] ||
+  [ "$deployed_branch" == "versions" ] ||
+  [ "$deployed_branch" == "fonts" ] ||
+  [ "$deployed_branch" == "assets" ] ||
+  [ "$deployed_branch" == "styles" ]; then
+  echo "ERROR: Invalid branch name"
+  exit 1
+fi
+
+# Generate demo
+npm run demo
+
+if [ -n "$(git status --porcelain doc)" ]; then
+  echo "ERROR: Please commit your modifications"
+  exit 1
+fi
+
+tmpFontsDir=$(mktemp -d)
+tmpAssetsDir=$(mktemp -d)
+tmpStylesDir=$(mktemp -d)
+tmpDemoFile=$(mktemp)
+tmpIndexFile=$(mktemp)
+tmpFaviconFile=$(mktemp)
+
+cp -rv demo/fonts "$tmpFontsDir"
+cp -rv demo/assets "$tmpAssetsDir"
+cp -rv demo/styles "$tmpStylesDir"
+cp -v demo/bundle.js "$tmpDemoFile"
+cp -v demo/index.html "$tmpIndexFile"
+cp -v demo/plus.ico "$tmpFaviconFile"
+
+# update gh-pages
+git checkout gh-pages
+git pull origin gh-pages
+
+rm -rf "$deployed_branch"
+mkdir -p "$deployed_branch"
+mv "$tmpIndexFile" "${deployed_branch}/index.html"
+mv "$tmpFaviconFile" "${deployed_branch}/plus.ico"
+mv "$tmpDemoFile" "${deployed_branch}/bundle.js"
+mv "$tmpFontsDir/fonts" "${deployed_branch}/fonts"
+mv "$tmpAssetsDir/assets" "${deployed_branch}/assets"
+mv "$tmpStylesDir/styles" "${deployed_branch}/styles"
+
+if [ -n "$(git status --porcelain "$deployed_branch")" ]; then
+  echo "-- Current Status on gh-pages: --"
+  echo ""
+  git status "$deployed_branch"
+
+  while :; do
+    echo ""
+    echo "We will push the demo to gh-pages."
+    REPLY=""
+    read -p "do you want to continue [y/d/s/a/c/t/h] (h for help) ? " -n 1 -r
+    echo ""
+
+    if [[ $REPLY =~ ^[Hh](elp)?$ ]]; then
+      echo ""
+      echo ""
+      echo "+- help -------------------------------------------------+"
+      echo "| y: commit and continue                                 |"
+      echo "| d: see diff                                            |"
+      echo "| s: see status                                          |"
+      echo "| a: abort script from here                              |"
+      echo "| c: checkout from this commit and go to the next one    |"
+      echo "| t: stash this commit and go to the next one            |"
+      echo "| h: see this help                                       |"
+      echo "+--------------------------------------------------------+"
+    elif [[ $REPLY =~ ^[Yy](es)?$ ]]; then
+      git add "$deployed_branch"
+      git commit -m "demo: deploy $deployed_branch demo to the gh-pages" -S
+      git push origin gh-pages
+      break
+    elif [[ $REPLY =~ ^[Dd](iff)?$ ]]; then
+      git diff "$deployed_branch"
+    elif [[ $REPLY =~ ^[Ss](tatus)?$ ]]; then
+      git status "$deployed_branch"
+    elif [[ $REPLY =~ ^[Aa](bort)?$ ]]; then
+      echo "exiting"
+      exit 1
+    elif [[ $REPLY =~ ^[Cc](heckout)?$ ]]; then
+      git checkout "$deployed_branch"
+    elif [[ $REPLY =~ ^([Tt]|([Ss]tash))?$ ]]; then
+      git stash -u push "$deployed_branch"
+      break
+    fi
+  done
+else
+  echo "nothing to do on the gh-pages branch"
+fi
+
+git checkout "$current_branch"

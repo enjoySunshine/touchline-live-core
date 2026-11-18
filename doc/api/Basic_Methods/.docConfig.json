@@ -1,0 +1,84 @@
+{
+  "pages": [
+    {
+      "path": "./getPlayerState.md",
+      "displayName": "getPlayerState"
+    },
+    {
+      "path": "./addEventListener.md",
+      "displayName": "addEventListener"
+    },
+    {
+      "path": "./removeEventListener.md",
+      "displayName": "removeEventListener"
+    },
+    {
+      "path": "./play.md",
+      "displayName": "play"
+    },
+    {
+      "path": "./pause.md",
+      "displayName": "pause"
+    },
+    {
+      "path": "./stop.md",
+      "displayName": "stop"
+    },
+    {
+      "path": "./getPosition.md",
+      "displayName": "getPosition"
+    },
+    {
+      "path": "./getWallClockTime.md",
+      "displayName": "getWallClockTime"
+    },
+    {
+      "path": "./getWallClockOffset.md",
+      "displayName": "getWallClockOffset"
+    },
+    {
+      "path": "./seekTo.md",
+      "displayName": "seekTo"
+    },
+    {
+      "path": "./getMinimumPosition.md",
+      "displayName": "getMinimumPosition"
+    },
+    {
+      "path": "./getMaximumPosition.md",
+      "displayName": "getMaximumPosition"
+    },
+    {
+      "path": "./getLivePosition.md",
+      "displayName": "getLivePosition"
+    },
+    {
+      "path": "./getMediaDuration.md",
+      "displayName": "getMediaDuration"
+    },
+    {
+      "path": "./getError.md",
+      "displayName": "getError"
+    },
+    {
+      "path": "./getVideoElement.md",
+      "displayName": "getVideoElement"
+    },
+    {
+      "path": "./getAvailablePeriods.md",
+      "displayName": "getAvailablePeriods"
+    },
+    {
+      "path": "./getCurrentPeriod.md",
+      "displayName": "getCurrentPeriod"
+    },
+    {
+      "path": "./dispose.md",
+      "displayName": "dispose"
+    },
+    {
+      "path": "./reload.md",
+      "displayName": "reload"
+    }
+  ]
+}

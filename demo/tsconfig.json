@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "target": "es2017",
+    "lib": ["es2017", "dom"],
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": false,
+    "noImplicitAny": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "types": [],
+    "moduleResolution": "bundler",
+    "jsx": "react",
+    "rewriteRelativeImportExtensions": true,
+    "typeRoots": ["../node_modules/@types"]
+  },
+  "include": ["../src/globals.prod.d.ts", "./scripts/**/*"]
+}

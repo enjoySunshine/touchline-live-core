@@ -1,0 +1,218 @@
+#!/bin/bash
+
+# Document how to use this script and what it is for
+help() {
+  cat <<EOF
+install_rust_toolchain.sh
+-------------------------
+
+Install tools allowing to build Rust code into WebAssembly, as it is a
+requirement to build some components of the RxPlayer.
+
+After running this script, both \`rustup\` and \`binaryen\` will be installed in
+a local directory named \`tmp\`.
+
+Usage: $0 [OPTIONS]
+
+Options:
+
+  --no-confirmation       If set, this script will never ask for confirmation and
+                          just validate all prompts.
+                          Intended for automated scripts.
+  -h, --help              Show this help message and exit
+EOF
+}
+
+# Exit on error, undefined variable and error in pipes
+set -euo pipefail
+
+NO_CONFIRM=false
+
+# Parse command line options
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --no-confirmation)
+    NO_CONFIRM=true
+    ;;
+  -h|--help) help; exit 0;;
+  *) echo "Unknown option: $1"; help; exit 1 ;;
+  esac
+  shift
+done
+
+# Log a line to stdout, prefixing it with the name of this script
+log() {
+  printf 'rx-player > install_rust_toolchain: %s\n' "$1"
+}
+
+# Log a line to stderr, prefixing it with the name of this script
+err() {
+  log "ERROR: $1" >&2
+  echo ""
+  echo "Please install a nightly Rust toolchain (with rust-src and the \"wasm32-unknown-unknown\" target) and binaryen manually" >&2
+  exit 1
+}
+
+# Checks that the command in argument exists, exits after printing the issue to
+# stderr if that's not the case
+requires_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    err "Need '$1' (command not found)"
+  fi
+}
+
+# Run a command that should never fail. If the command fails execution
+# will immediately terminate with an error showing the failing
+# command.
+ensure() {
+  if ! "$@"; then
+    err "Command failed: $*"
+  fi
+}
+
+log "This script will install Rust dependencies locally in the following directory: $(pwd)/tmp"
+log "A lot of logs may be produced by this installation, they can mostly be ignored."
+
+requires_cmd curl
+requires_cmd tar
+
+echo ""
+echo "We will load rustup from the following URL and execute it:"
+echo "https://sh.rustup.rs"
+if [ "$NO_CONFIRM" = false ]; then
+  echo -n "Do you want to continue? (y/N): "
+  if read -r response; then
+    if [[ ! "$response" =~ ^[Yy][Ee][Ss]$ && ! "$response" =~ ^[Yy]$ ]]; then
+      echo "Cancelled."
+      exit 1
+    fi
+  else
+    echo ""
+    echo "Cancelled."
+    exit 1
+  fi
+fi
+
+ensure mkdir -p tmp
+
+# Install RustUp in tmp directory. The nightly rust-src component is needed to
+# rebuild std with the same restricted WebAssembly feature set as the parser.
+log "Fetching rustup..."
+
+if ! curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | CARGO_HOME=./tmp/cargo RUSTUP_HOME=./tmp/rustup RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- --no-modify-path --profile minimal --target wasm32-unknown-unknown -y; then
+  err "Failed to install rustup"
+fi
+
+if ! [ -f tmp/cargo/bin/cargo ]; then
+  err "Error while installing rustup: Cargo not available in ./tmp/cargo/bin/cargo"
+fi
+
+# Should normally not be needed but CI have shown weird results
+ensure env CARGO_HOME="$(pwd)/tmp/cargo" RUSTUP_HOME="$(pwd)/tmp/rustup" \
+  tmp/cargo/bin/rustup default stable
+ensure env CARGO_HOME="$(pwd)/tmp/cargo" RUSTUP_HOME="$(pwd)/tmp/rustup" \
+  tmp/cargo/bin/rustup toolchain install nightly --profile minimal --component rust-src
+ensure env CARGO_HOME="$(pwd)/tmp/cargo" RUSTUP_HOME="$(pwd)/tmp/rustup" \
+  tmp/cargo/bin/rustup target add --toolchain nightly wasm32-unknown-unknown
+
+ostype="$(uname -s)"
+cpuarch="$(uname -m)"
+
+if [ "$ostype" = Linux ]; then
+  if [ "$(uname -o)" = Android ]; then
+    err "Unhandled OS type (Android), please install binaryen manually"
+  fi
+fi
+
+if [ "$ostype" = Darwin ] && [ "$cpuarch" = i386 ]; then
+  # Darwin `uname -m` lies
+  if sysctl hw.optional.x86_64 | grep -q ': 1'; then
+    cpuarch=x86_64
+  fi
+fi
+
+case "$ostype" in
+Linux) ;;
+Darwin) ;;
+MINGW* | MSYS* | CYGWIN* | Windows_NT)
+  ostype=Windows
+  ;;
+*)
+  err "Unhandled OS type ($ostype), please install binaryen manually"
+  ;;
+esac
+
+case "$cpuarch" in
+aarch64 | arm64)
+  cpuarch=aarch64
+  ;;
+x86_64 | x86-64 | x64 | amd64)
+  cpuarch=x86_64
+  ;;
+*)
+  err "Unhandled CPU type ($cpuarch), please install binaryen manually"
+  ;;
+esac
+
+# TODO automatically download last binaryen?
+# We might need to detect which build is available. Targeting version 116 is
+# good enough for now
+if [ "${ostype}" = Darwin ]; then
+  if [ "${cpuarch}" = aarch64 ]; then
+    log "Architecture detected -> MacOS ARM"
+    binaryen_url=https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-arm64-macos.tar.gz
+  else
+    log "Architecture detected -> MacOS x86_64"
+    binaryen_url=https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-macos.tar.gz
+  fi
+elif [ "${ostype}" = Linux ]; then
+  if [ "${cpuarch}" != x86_64 ]; then
+    err "For Linux, only x86_64 is supported by our auto-install script. Please install binaryen manually."
+  fi
+  log "Architecture detected -> Linux x86_64"
+  binaryen_url=https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz
+elif [ "${ostype}" = Windows ]; then
+  if [ "${cpuarch}" != x86_64 ]; then
+    err "For Windows, only x86_64 is supported by our auto-install script. Please install binaryen manually."
+  fi
+  log "Architecture detected -> Windows x86_64"
+  binaryen_url=https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-windows.tar.gz
+fi
+
+echo ""
+echo "We will load binaryen from the following URL and add executable permission to it:"
+echo "$binaryen_url"
+if [ "$NO_CONFIRM" = false ]; then
+  echo -n "Do you want to continue? (y/N): "
+  if read -r response; then
+    if [[ ! "$response" =~ ^[Yy][Ee][Ss]$ && ! "$response" =~ ^[Yy]$ ]]; then
+      echo "Cancelled."
+      exit 1
+    fi
+  else
+    echo ""
+    echo "Cancelled."
+    exit 1
+  fi
+fi
+
+log "Fetching binaryen 116..."
+
+if ! curl -L "$binaryen_url" >tmp/binaryen.tar.gz; then
+  err "Failed to fetch binaryen"
+fi
+
+cd tmp
+ensure tar xzf binaryen.tar.gz
+
+ensure mv binaryen-version_116 binaryen
+
+rm binaryen.tar.gz
+cd ..
+
+if ! [ -f tmp/binaryen/bin/wasm-opt ]; then
+  err "Error after installing binaryen: wasm-opt not available in ./tmp/binaryen/bin/wasm-opt"
+fi
+
+log "All Rust dependencies have been installed"
+log "Exiting the current script with success!"

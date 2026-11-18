@@ -1,0 +1,128 @@
+import MetaPlaylistDASHSmoothURL from "./metaplaylist_url.ts";
+
+export interface IDrmInfo {
+  licenseServerUrl: string;
+  drm: string;
+  serverCertificateUrl?: string | null;
+  customKeySystem?: string | null;
+}
+
+export interface IDefaultContent {
+  name: string;
+  url: string;
+  transport: string;
+  live: boolean;
+  drmInfos?: IDrmInfo[];
+}
+
+const DEFAULT_CONTENTS: IDefaultContent[] = [
+  {
+    name: "Tears of Steel (clear)",
+    url: "https://www.bok.net/dash/tears_of_steel/cleartext/stream.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "Live with thumbnail track",
+    url: "https://livesim2.dashif.org/livesim2/testpic_2s/Manifest_thumbs.mpd",
+    transport: "dash",
+    live: true,
+  },
+  {
+    name: "Axinom CMAF multiple Audio and Text tracks Tears of steel",
+    url: "https://media.axprod.net/TestVectors/Cmaf/clear_1080p_h264/manifest.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "Multiple audio language",
+    url: "https://dash.akamaized.net/dash264/TestCasesIOP41/MultiTrack/alternative_content/6/manifest_alternative_lang.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "DASH-IF - Trickmode",
+    url: "https://dash.akamaized.net/dash264/TestCases/9b/qualcomm/1/MultiRate.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "DASH-IF - Multi-Subtitles",
+    url: "https://livesim.dashif.org/dash/vod/testpic_2s/multi_subs.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "DASH-IF - Audio-only",
+    url: "https://dash.akamaized.net/dash264/TestCases/3a/fraunhofer/aac-lc_stereo_without_video/Sintel/sintel_audio_only_aaclc_stereo_sidx.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "DASH IF - SegmentTemplate",
+    url: "https://livesim.dashif.org/livesim/testpic_2s/Manifest.mpd",
+    transport: "dash",
+    live: true,
+  },
+  {
+    name: "DASH IF - SegmentTimeline",
+    url: "https://livesim.dashif.org/livesim/segtimeline_1/testpic_2s/Manifest.mpd",
+    transport: "dash",
+    live: true,
+  },
+  {
+    name: "VOD with thumbnail track",
+    url: "https://dash.akamaized.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "Super SpeedWay",
+    url: "https://playready.directtaps.net/smoothstreaming/SSWSS720H264/SuperSpeedway_720.ism/Manifest",
+    transport: "smooth",
+    live: false,
+  },
+  {
+    name: "Multi-Period (5 Periods of 2 min)",
+    url: "https://download.tsi.telecom-paristech.fr/gpac/DASH_CONFORMANCE/TelecomParisTech/mp4-live-periods/mp4-live-periods-mpd.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "Big Buck Bunny WEBM",
+    url: "https://upload.wikimedia.org/wikipedia/commons/transcoded/8/88/Big_Buck_Bunny_alt.webm/Big_Buck_Bunny_alt.webm.360p.webm",
+    transport: "directfile",
+    live: false,
+  },
+  {
+    name: "Big Buck Bunny MP4",
+    url: "http://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4",
+    transport: "directfile",
+    live: false,
+  },
+  {
+    name: "Wikipedia test OGG (AUDIO ONLY)",
+    url: "https://upload.wikimedia.org/wikipedia/commons/f/f2/Median_test.ogg",
+    transport: "directfile",
+    live: false,
+  },
+  {
+    name: "Google - Sintel webm only",
+    url: "https://storage.googleapis.com/shaka-demo-assets/sintel-webm-only/dash.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "Multi Video Tracks",
+    url: "https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd",
+    transport: "dash",
+    live: false,
+  },
+  {
+    name: "Mix of DASH and Smooth VOD Contents",
+    url: MetaPlaylistDASHSmoothURL,
+    transport: "metaplaylist",
+    live: false,
+  },
+];
+export default DEFAULT_CONTENTS;

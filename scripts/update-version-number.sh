@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Document how to use this script and what it is for
+help() {
+  cat <<EOF
+update-version-number.sh
+------------------------
+
+This script updates the version number in files where it is indicated.
+
+/!\ It does not create a new git tag, nor commit anything, nor produce
+builds.
+It only update files.
+
+To use it:
+
+  1. Be sure that you're on the branch corresponding to the wanted version.
+
+  2. Call this script with the corresponding RxPlayer version in argument.
+
+  3. Wait for all the script to finish and stay attentive to what it says
+
+  4. That's it!
+
+Usage: $0 [OPTIONS] <VERSION>
+
+Options:
+  -h, --help       Show this help message and exit
+EOF
+}
+
+# Exit on error, undefined variable and error in pipes
+set -euo pipefail
+
+# Look for help flag first
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  -h|--help) help; exit 0;;
+  --) shift; break;;
+  -*) echo "Unknown option: $1" >&2; exit 1;;
+  *) break;;  # not a flag, stop parsing
+  esac
+  shift
+done
+
+if [ $# -eq 0 ]; then
+  read -r -p "Please enter the wanted version number (example: 4.12.1): " version
+  echo ""
+  if [ -z "${version}" ]; then
+    # TODO SEMVER REGEX?
+    err "Please enter a valid version number next time."
+  fi
+else
+  version=$1
+fi
+
+date_iso=$(date "+%Y-%m-%d")
+
+sed -i.bak -E -e "s/^\#\# Unreleased/\#\# v${version} \(${date_iso}\)/gi" CHANGELOG.md && rm CHANGELOG.md.bak
+sed -i.bak -E -e "s/\/\\* PLAYER_VERSION \\*\/[[:space:]]*\".*\";/\/* PLAYER_VERSION *\/ \"${version}\";/g" src/main_thread/api/public_api.ts && rm src/main_thread/api/public_api.ts.bak
+sed -i.bak -E -e "s/\"version\":[[:space:]]*\"[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+[^\"]*\"/\"version\": \"${version}\"/g" package.json && rm package.json.bak
+sed -i.bak -E -e "s/sonar\.projectVersion= *.*/sonar.projectVersion=${version}/g" sonar-project.properties && rm sonar-project.properties.bak
+echo "$version" > VERSION

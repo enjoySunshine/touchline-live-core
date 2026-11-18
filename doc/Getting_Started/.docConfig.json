@@ -1,0 +1,36 @@
+{
+  "pages": [
+    {
+      "path": "./Welcome.md",
+      "displayName": "Welcome"
+    },
+    {
+      "path": "./Tutorials",
+      "displayName": "Tutorials"
+    },
+    {
+      "path": "./Minimal_Player.md",
+      "displayName": "Importing a minimal RxPlayer"
+    },
+    {
+      "path": "./MultiThreading.md",
+      "displayName": "Multithread mode"
+    },
+    {
+      "path": "./ImportableWorker.md",
+      "displayName": "Multithread mode: Custom worker"
+    },
+    {
+      "path": "./Glossary.md",
+      "displayName": "Glossary"
+    },
+    {
+      "path": "./Troubleshooting.md",
+      "displayName": "Troubleshooting"
+    },
+    {
+      "path": "./Migration_From_v3",
+      "displayName": "Migration from RxPlayer v3"
+    }
+  ]
+}

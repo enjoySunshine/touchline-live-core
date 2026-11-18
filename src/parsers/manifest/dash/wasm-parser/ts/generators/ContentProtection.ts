@@ -1,0 +1,64 @@
+/**
+ * Copyright 2015 CANAL+ Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { base64ToBytes } from "../../../../../../utils/base64.ts";
+import { hexToBytes } from "../../../../../../utils/string_parsing.ts";
+import type { IContentProtectionIntermediateRepresentation } from "../../../node_parser_types.ts";
+import type { IAttributeParser } from "../parsers_stack.ts";
+import { AttributeName } from "../types.ts";
+import { parseString } from "../utils.ts";
+
+/**
+ * @param {Object} cp
+ * @param {WebAssembly.Memory} linearMemory
+ * @returns {Function}
+ */
+export function generateContentProtectionAttrParser(
+  cp: IContentProtectionIntermediateRepresentation,
+  linearMemory: WebAssembly.Memory,
+): IAttributeParser {
+  const cpAttrs = cp.attributes;
+  const cpChildren = cp.children;
+  return function onContentProtectionAttribute(attr: number, ptr: number, len: number) {
+    switch (attr) {
+      case AttributeName.SchemeIdUri:
+        cpAttrs.schemeIdUri = parseString(linearMemory.buffer, ptr, len);
+        break;
+      case AttributeName.ContentProtectionValue:
+        cpAttrs.value = parseString(linearMemory.buffer, ptr, len);
+        break;
+      case AttributeName.ContentProtectionKeyId: {
+        const kid = parseString(linearMemory.buffer, ptr, len);
+        cpAttrs["cenc:default_KID"] = hexToBytes(kid.replace(/-/g, ""));
+        break;
+      }
+      case AttributeName.ContentProtectionCencPSSH:
+        try {
+          const b64 = parseString(linearMemory.buffer, ptr, len);
+          cpChildren["cenc:pssh"].push({ value: base64ToBytes(b64) });
+        } catch (_) {
+          /* TODO log error? register as warning? */
+        }
+        break;
+      case AttributeName.ContentProtectionRef:
+        cpAttrs.ref = parseString(linearMemory.buffer, ptr, len);
+        break;
+      case AttributeName.ContentProtectionRefId:
+        cpAttrs.refId = parseString(linearMemory.buffer, ptr, len);
+        break;
+    }
+  };
+}

@@ -1,0 +1,75 @@
+diff --git a/src/parsers/texttracks/ttml/html/apply_extent.ts b/src/parsers/texttracks/ttml/html/apply_extent.ts
+index aa173eee7..bba6ad77c 100644
+--- a/src/parsers/texttracks/ttml/html/apply_extent.ts
++++ b/src/parsers/texttracks/ttml/html/apply_extent.ts
+@@ -45,7 +45,12 @@ export default function applyExtent(element: HTMLElement, extent: string): void
+     }
+ 
+     if (secondExtent[2] === "px" || secondExtent[2] === "%" || secondExtent[2] === "em") {
+-      element.style.height = secondExtent[1] + secondExtent[2];
++      const toNum = Number(secondExtent[1]);
++      if (secondExtent[2] === "%" && !isNaN(toNum) && (toNum < 0 || toNum > 100)) {
++        element.style.width = "80%";
++      } else {
++        element.style.height = secondExtent[1] + secondExtent[2];
++      }
+     } else if (secondExtent[2] === "c") {
+       addClassName(element, "proportional-style");
+       element.setAttribute("data-proportional-height", secondExtent[1]);
+diff --git src/parsers/texttracks/ttml/html/apply_line_height.ts src/parsers/texttracks/ttml/html/apply_line_height.ts
+index 85e28552f..0eb0d12bf 100644
+--- a/src/parsers/texttracks/ttml/html/apply_line_height.ts
++++ b/src/parsers/texttracks/ttml/html/apply_line_height.ts
+@@ -14,15 +14,14 @@
+  * limitations under the License.
+  */
+ 
+-import addClassName from "../../../../compat/add_class_name.ts";
+ import log from "../../../../log.ts";
+ import { REGXP_LENGTH } from "../regexps.ts";
+ 
+ /**
+- * @param {HTMLElement} element
++ * @param {HTMLElement} _element
+  * @param {string} lineHeight
+  */
+-export default function applyLineHeight(element: HTMLElement, lineHeight: string): void {
++export default function applyLineHeight(_element: HTMLElement, lineHeight: string): void {
+   const trimmedLineHeight = lineHeight.trim();
+   const splittedLineHeight = trimmedLineHeight.split(" ");
+ 
+@@ -53,10 +52,10 @@ export default function applyLineHeight(element: HTMLElement, lineHeight: string
+     // firstLineHeight[2] === "%" ||
+     firstLineHeight[2] === "em"
+   ) {
+-    element.style.lineHeight = firstLineHeight[1] + firstLineHeight[2];
++    // element.style.lineHeight = firstLineHeight[1] + firstLineHeight[2];
+   } else if (firstLineHeight[2] === "c") {
+-    addClassName(element, "proportional-style");
+-    element.setAttribute("data-proportional-line-height", firstLineHeight[1]);
++    // addClassName(element, "proportional-style");
++    // element.setAttribute("data-proportional-line-height", firstLineHeight[1]);
+   } else {
+     log.warn("ttml", "unhandled lineHeight unit", { unit: firstLineHeight[2] });
+   }
+diff --git a/src/parsers/texttracks/ttml/html/apply_origin.ts b/src/parsers/texttracks/ttml/html/apply_origin.ts
+index 856449c2f..b924ed248 100644
+--- a/src/parsers/texttracks/ttml/html/apply_origin.ts
++++ b/src/parsers/texttracks/ttml/html/apply_origin.ts
+@@ -44,7 +44,15 @@ export default function applyOrigin(element: HTMLElement, origin: string): void
+     }
+ 
+     if (secondOrigin[2] === "px" || secondOrigin[2] === "%" || secondOrigin[2] === "em") {
+-      element.style.top = secondOrigin[1] + secondOrigin[2];
++      const toNum = Number(secondOrigin[1]);
++      if (secondOrigin[2] === "%" && !isNaN(toNum) &&
++          (toNum < 0 || toNum > 100))
++      {
++        element.style.bottom = "5%";
++        element.style.left = "10%";
++      } else {
++        element.style.top = secondOrigin[1] + secondOrigin[2];
++      }
+     } else if (secondOrigin[2] === "c") {
+       addClassName(element, "proportional-style");
+       element.setAttribute("data-proportional-top", secondOrigin[1]);

@@ -1,0 +1,29 @@
+/*.keys
+/*.log
+/.eslintignore
+/.scannerwork
+/sonar-project.properties
+/localhost.crt
+/localhost.key
+/node_modules
+/webpack-demo.config.mjs
+/tmp
+/demo
+
+/tests
+
+/doc
+/.github
+/scripts
+# rust build artifacts
+/src/parsers/manifest/dash/wasm-parser/target
+
+/FILES.md
+/CONTRIBUTING.md
+
+# tools config
+/.editorconfig
+/.eslintrc*
+/jest.config.js
+/tsconfig*.json
+/webpack.config.mjs

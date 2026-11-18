@@ -1,0 +1,31 @@
+{
+  "logo": {
+    "srcPath": "./static/img/logo.png",
+    "link": "./"
+  },
+  "favicon": {
+    "srcPath": "./static/img/favicon.png"
+  },
+  "linksLeft": [
+    {
+      "type": "local-doc",
+      "path": "./Getting_Started",
+      "displayName": "Getting Started"
+    },
+    {
+      "type": "local-doc",
+      "path": "./api",
+      "displayName": "API"
+    },
+    {
+      "type": "local-doc",
+      "path": "./reference",
+      "displayName": "Reference"
+    },
+    {
+      "type": "search"
+    }
+  ],
+  "linksRight": [],
+  "siteMapRoot": "./"
+}
