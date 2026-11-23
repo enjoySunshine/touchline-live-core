@@ -1,154 +1,71 @@
-// Distance from live edge we try to reach when the catching up button
+// Live catch-up is now handled inside the RxPlayer itself, independently of
+// any application-side toggle: the player maintains the same distance from the
+// live edge than the one chosen when the content started, on every live
+// content. It does so without changing the viewer-set playback rate (readable
+// through `getPlaybackRate`) and without replacing the adaptive bitrate logic.
+//
+// This controller is kept as a thin compatibility layer so the demo's existing
+// "stick to live edge" toggle keeps working as a UI control, but it no longer
+// performs any seek or playback rate change itself.
 
 import type { IPlayerModuleState } from ".";
 import type RxPlayer from "../../../../src/index.ts";
 import type { IStateUpdater } from "../../lib/declareModule.ts";
 
-// is enabled.
-const LIVE_GAP_GOAL_WHEN_CATCHING_UP = 3.5;
-
-// Distance from live edge from which we begin to update the playback rate, as
-// we're considered too far from the live edge.
-const CATCH_UP_CHANGE_RATE_STEP = 6;
-
-// Distance from live edge from which we are considered too far too just
-// change the playback rate. In the case the current distance is superior
-// to that value, we will seek to a LIVE_GAP_GOAL_WHEN_CATCHING_UP distance
-// directly instead.
-const CATCH_UP_SEEKING_STEP = 15;
-
-// Maximum playback rate we can set when catching up.
-const MAX_RATE = 5;
-
 /**
- * Perform actions when catch-up mode is enabled/disabled.
+ * Compatibility controller for the demo's catch-up toggle.
  *
- * When it is disabled:
- *   - Reset the playback rate if it was catching up
- *   - Disable catching up mode every time it is found to be enabled
- *
- * When it is enabled:
- *   - seek back to live if it is too far from it.
- *   - Update playback rate and `isCatchingUp` if it is far from the live edge
- *     but not enough too trigger the seek
+ * The actual catch-up mechanism lives in the player core and is always active
+ * for live contents, whatever the toggle state. This class only reflects the
+ * toggle in the demo state and listens to the player's `liveCatchUpStateChange`
+ * event to surface when an internal catch-up is ongoing.
  */
 export default class CatchUpModeController {
   private _rxPlayer: RxPlayer;
   private _state: IStateUpdater<IPlayerModuleState>;
-  private _catchUpAborter: AbortController | null;
+  private _onCatchUpState:
+    | ((evt: {
+        isCatchingUp: boolean;
+        liveGap: number | undefined;
+        effectiveSpeed: number;
+      }) => void)
+    | null;
 
   constructor(rxPlayer: RxPlayer, state: IStateUpdater<IPlayerModuleState>) {
     this._rxPlayer = rxPlayer;
     this._state = state;
-    this._catchUpAborter = null;
+    this._onCatchUpState = null;
   }
 
   enableCatchUp() {
-    if (this._catchUpAborter !== null) {
-      return;
-    }
-    this._catchUpAborter = new AbortController();
-    let interval: number | null = null;
-    const onStateChange = () => {
-      if (interval !== null) {
-        clearInterval(interval);
-        interval = null;
-      }
-      const playerState = this._rxPlayer.getPlayerState();
-      const canCatchUp =
-        playerState === "LOADED" ||
-        playerState === "PLAYING" ||
-        playerState === "PAUSED" ||
-        playerState === "BUFFERING" ||
-        playerState === "FREEZING" ||
-        playerState === "SEEKING";
-      if (!this._rxPlayer.isLive()) {
-        // Catch-up is only authorized for live contents
-        this.stopCatchUp();
-      } else if (!canCatchUp) {
-        // Stop catching up if the state does not make sense for it
-        this._rxPlayer.setPlaybackRate(1);
-        this._state.updateBulk({ isCatchingUp: false, playbackRate: 1 });
-      } else {
-        const checkCatchUp = () => {
-          const livePos =
-            this._rxPlayer.getLivePosition() ?? this._rxPlayer.getMaximumPosition();
-          if (livePos === null) {
-            this._rxPlayer.setPlaybackRate(1);
-            this._state.updateBulk({ isCatchingUp: false, playbackRate: 1 });
-            return;
-          }
-          const position = this._rxPlayer.getPosition();
-          const liveGap = livePos - position;
-          if (liveGap >= CATCH_UP_SEEKING_STEP) {
-            // If we're too far from the live to just change the playback rate,
-            // seek directly close to live
-            this._rxPlayer.seekTo(livePos - LIVE_GAP_GOAL_WHEN_CATCHING_UP);
-            this._rxPlayer.setPlaybackRate(1);
-            this._state.updateBulk({ isCatchingUp: false, playbackRate: 1 });
-            return;
-          }
-
-          if (this._state.get("isCatchingUp")) {
-            if (liveGap <= LIVE_GAP_GOAL_WHEN_CATCHING_UP) {
-              // If we reached `LIVE_GAP_GOAL_WHEN_CATCHING_UP`, we can stop
-              // catching up
-              this._rxPlayer.setPlaybackRate(1);
-              this._state.updateBulk({ isCatchingUp: false, playbackRate: 1 });
-              return;
-            }
-          } else if (liveGap < CATCH_UP_CHANGE_RATE_STEP) {
-            // Not catching up but we're close enough to the live, so no problem
-            // here.
-            return;
-          }
-
-          // If we reached this point, we need to catch up by modifiying the
-          // playback rate. The following code determine by how much
-
-          const factor = (liveGap - LIVE_GAP_GOAL_WHEN_CATCHING_UP) / 4;
-          const rate = Math.round(Math.min(MAX_RATE, 1.1 + factor) * 10) / 10;
-          if (rate <= 1) {
-            this._rxPlayer.setPlaybackRate(1);
-            this._state.updateBulk({ isCatchingUp: false, playbackRate: 1 });
-            return;
-          }
-
-          const currentPlaybackRate = this._rxPlayer.getPlaybackRate();
-          if (rate !== currentPlaybackRate) {
-            this._rxPlayer.setPlaybackRate(rate);
-          }
-          this._state.updateBulk({ isCatchingUp: true, playbackRate: rate });
-        };
-        interval = window.setInterval(checkCatchUp, 200);
-        checkCatchUp();
-
-        this._catchUpAborter?.signal.addEventListener("abort", () => {
-          if (interval !== null) {
-            clearInterval(interval);
-            interval = null;
-          }
-        });
-      }
-    };
-    this._rxPlayer.addEventListener("playerStateChange", onStateChange);
-
-    this._catchUpAborter?.signal.addEventListener("abort", () => {
-      this._rxPlayer.removeEventListener("playerStateChange", onStateChange);
-    });
+    // The core catch-up mechanism is always active; this only updates the
+    // demo's toggle state.
+    this._state.update("isCatchUpEnabled", true);
+    this._startListening();
   }
 
   stopCatchUp() {
-    if (this._catchUpAborter === null) {
-      return;
+    if (this._onCatchUpState !== null) {
+      this._rxPlayer.removeEventListener("liveCatchUpStateChange", this._onCatchUpState);
+      this._onCatchUpState = null;
     }
-    this._catchUpAborter.abort();
-    this._catchUpAborter = null;
-    this._rxPlayer.setPlaybackRate(1);
     this._state.updateBulk({
       isCatchUpEnabled: false,
       isCatchingUp: false,
-      playbackRate: 1,
     });
+  }
+
+  /**
+   * Reflect the player's internal catch-up state in the demo state. The
+   * viewer-set playback rate (`playbackRate`) is intentionally left untouched.
+   */
+  private _startListening() {
+    if (this._onCatchUpState !== null) {
+      return;
+    }
+    this._onCatchUpState = (evt) => {
+      this._state.update("isCatchingUp", evt.isCatchingUp);
+    };
+    this._rxPlayer.addEventListener("liveCatchUpStateChange", this._onCatchUpState);
   }
 }

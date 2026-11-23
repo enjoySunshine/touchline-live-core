@@ -39,6 +39,16 @@ function ControlBar({
   const livePosition = useModuleState(player, "livePosition");
   const maximumPosition = useModuleState(player, "maximumPosition");
   const playbackRate = useModuleState(player, "playbackRate");
+  const videoRepresentation = useModuleState(player, "videoRepresentation");
+
+  const liveEdgeDistance =
+    isLive && liveGap !== undefined ? `${liveGap.toFixed(1)} s` : "--";
+  const videoBitrateLabel =
+    videoRepresentation !== undefined &&
+    videoRepresentation !== null &&
+    videoRepresentation.bitrate !== undefined
+      ? String(videoRepresentation.bitrate)
+      : "--";
 
   const changeStickToLiveEdge = useCallback(
     (shouldStick: boolean) => {
@@ -121,10 +131,19 @@ function ControlBar({
           />
         ) : null}
         <div className="controls-right-side">
-          {!isPaused && isCatchingUp && playbackRate > 1 ? (
-            <div className="catch-up">
-              {"Catch-up playback rate: " + String(playbackRate)}
+          {isLive ? (
+            <div className="live-metrics" aria-label="Live edge monitoring">
+              <span className="live-metric">
+                {"Distance from live edge: " + liveEdgeDistance}
+              </span>
+              <span className="live-metric">
+                {"Playback rate: " + String(playbackRate)}
+              </span>
+              <span className="live-metric">{"Video bitrate: " + videoBitrateLabel}</span>
             </div>
+          ) : null}
+          {!isPaused && isCatchingUp ? (
+            <div className="catch-up">Catching up with the live edge</div>
           ) : null}
           <Button
             ariaLabel="Display/Hide controls"

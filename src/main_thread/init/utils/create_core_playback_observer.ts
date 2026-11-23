@@ -44,7 +44,12 @@ export interface ICorePlaybackObserverArguments {
   manifest: IManifestMetadata;
   /** Becomes `true` after the initial play has been taken care of. */
   initialPlayPerformed: IReadOnlySharedReference<boolean>;
-  /** The last speed requested by the user. */
+  /**
+   * The effective playback rate at which the content plays.
+   * It usually equals the last speed requested by the viewer but may
+   * temporarily differ while internal mechanisms (such as live catch-up) are
+   * raising the playback rate.
+   */
   speed: IReadOnlySharedReference<number>;
   /**
    * Used abstraction to implement text track displaying.
@@ -71,7 +76,10 @@ export interface ICorePlaybackObservation {
   duration: number;
   /** `readyState` property of the HTMLMediaElement. */
   readyState: number;
-  /** Target playback rate at which we want to play the content. */
+  /**
+   * Effective playback rate at which the content plays. Equals the viewer-set
+   * speed except while an internal mechanism (e.g. live catch-up) updates it.
+   */
   speed: number;
   /** Theoretical maximum position on the content that can currently be played. */
   maximumPosition: number;

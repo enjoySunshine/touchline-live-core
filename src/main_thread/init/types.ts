@@ -30,6 +30,7 @@ import type { IPlayerError } from "../../public_types.ts";
 import type { IThumbnailResponse } from "../../transports/index.ts";
 import EventEmitter from "../../utils/event_emitter.ts";
 import type SharedReference from "../../utils/reference.ts";
+import type { ILiveCatchUpState } from "./utils/live_catch_up_controller.ts";
 import type {
   IPublicNonFiniteStreamEvent,
   IPublicStreamEvent,
@@ -244,6 +245,11 @@ export interface IContentInitializerEvents {
    * given segment) have been encountered.
    */
   inbandEvents: IInbandEvent[];
+  /**
+   * Event emitted when the live catch-up mechanism changes state (starts or
+   * stops catching up with the live edge, or updates its effective rate).
+   */
+  liveCatchUpStateChange: ILiveCatchUpState;
 }
 
 export interface IAdaptationChangeEventPayload {

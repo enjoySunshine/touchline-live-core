@@ -912,6 +912,30 @@ export interface IPositionUpdate {
   liveGap?: number | undefined;
 }
 
+/**
+ * Payload of the `liveCatchUpStateChange` event, emitted while a live content
+ * catches up with its live edge.
+ */
+export interface ILiveCatchUpUpdate {
+  /**
+   * `true` while the player is actively catching up with the live edge.
+   * When catching up, the media element plays at a higher rate than the one
+   * set through `setPlaybackRate`, but `getPlaybackRate` still returns the
+   * viewer-set rate.
+   */
+  isCatchingUp: boolean;
+  /**
+   * Distance, in seconds, between the current position and the live edge.
+   * `undefined` if it cannot be computed yet (e.g. for a non-live content).
+   */
+  liveGap: number | undefined;
+  /**
+   * Effective playback rate currently applied to the media element. Equals the
+   * viewer-set rate when no catch-up is ongoing.
+   */
+  effectiveSpeed: number;
+}
+
 export type IPlayerState =
   | "STOPPED"
   | "LOADED"

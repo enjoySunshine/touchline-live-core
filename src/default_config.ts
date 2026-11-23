@@ -246,6 +246,41 @@ const DEFAULT_CONFIG = {
   },
 
   /**
+   * Maximum playback rate at which the player is allowed to play when catching
+   * up with the live edge on a live content.
+   * The media element's playback rate never goes above that value while catching
+   * up, even if the viewer set a higher one manually.
+   */
+  LIVE_CATCH_UP_MAX_RATE: 1.5,
+
+  /**
+   * Tolerance, in seconds, around the target distance from the live edge.
+   * A live content is considered back at its target distance once the actual
+   * distance differs from the target by at most that value.
+   */
+  LIVE_CATCH_UP_TOLERANCE: 0.4,
+
+  /**
+   * Maximum time, in seconds, within which a live content having drifted from
+   * the live edge should be brought back to its target distance (plus or minus
+   * `LIVE_CATCH_UP_TOLERANCE`), when enough data is buffered to do so.
+   */
+  LIVE_CATCH_UP_MAX_DURATION: 8,
+
+  /**
+   * Maximum amount of already-buffered content, in seconds, that a single
+   * catch-up seek is allowed to jump over.
+   */
+  LIVE_CATCH_UP_MAX_SEEK: 2,
+
+  /**
+   * Maximum difference, in milliseconds, between the audio and video playheads
+   * tolerated when performing a catch-up seek. The seek target must be
+   * available in both the audio and the video buffers at the same time.
+   */
+  LIVE_CATCH_UP_MAX_A_V_DESYNC_MS: 80,
+
+  /**
    * Maximum time, in seconds, the player should automatically skip when stalled
    * because of a current hole in the buffer.
    * Bear in mind that this might seek over not-yet-downloaded/pushed segments.

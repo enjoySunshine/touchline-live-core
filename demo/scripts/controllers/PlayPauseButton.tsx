@@ -31,7 +31,8 @@ function PlayPauseButton({
     player.actions.play();
   }, [player]);
   const pause = React.useCallback(() => {
-    player.actions.disableLiveCatchUp();
+    // The player itself freezes the playhead (and pauses catch-up) while
+    // paused, so the demo toggle does not need to be touched here.
     player.actions.pause();
   }, [player]);
 

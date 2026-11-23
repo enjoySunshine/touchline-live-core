@@ -944,6 +944,30 @@ This event is not sent in <i>DirectFile</i> mode (see
 <a href="./Loading_a_Content.md#transport">transport option</a>)
 </div>
 
+### liveCatchUpStateChange
+
+_payload type_: `Object`
+
+Event triggered when the player's internal "live catch-up" mechanism changes state while
+playing a live content.
+
+The player automatically maintains the same distance from the live edge than the one chosen
+when the content started (the manifest's `suggestedPresentationDelay`, or by default 3.5
+seconds in low-latency mode and 10 seconds otherwise). When the playback position drifts
+behind that target distance, the player temporarily raises the media element's playback rate
+(up to 1.5) and may perform short, bounded seeks over already-buffered content to get back to
+the target. The playback rate set through `setPlaybackRate` (and returned by
+`getPlaybackRate`) is not modified by this mechanism.
+
+The payload contains:
+
+- isCatchingUp (_type_: `Boolean`): `true` while the player is actively catching up with the
+  live edge.
+- liveGap (_type_: `Number|undefined`): distance, in seconds, between the current position and
+  the live edge. `undefined` if it cannot be computed.
+- effectiveSpeed (_type_: `Number`): the effective playback rate currently applied to the media
+  element. Equals the viewer-set rate when no catch-up is ongoing.
+
 ### streamEvent
 
 _payload type_: `Object`

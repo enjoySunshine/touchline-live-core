@@ -84,6 +84,7 @@ import type {
   IKeySystemConfigurationOutput,
   IKeySystemOption,
   ILoadVideoOptions,
+  ILiveCatchUpUpdate,
   ILockedAudioRepresentationsSettings,
   ILockedVideoRepresentationsSettings,
   ITrackUpdateEventPayload,
@@ -1419,6 +1420,9 @@ class Player extends EventEmitter<IPublicAPIEvent> {
     });
     initializer.addEventListener("inbandEvents", (inbandEvents) =>
       this.trigger("inbandEvents", inbandEvents),
+    );
+    initializer.addEventListener("liveCatchUpStateChange", (liveCatchUpUpdate) =>
+      this.trigger("liveCatchUpStateChange", liveCatchUpUpdate),
     );
     initializer.addEventListener("streamEvent", (streamEvent) =>
       this.trigger("streamEvent", streamEvent),
@@ -3897,6 +3901,7 @@ interface IPublicAPIEvent {
   streamEventSkip: IStreamEvent;
   inbandEvents: IInbandEvent[];
   noPlayableTrack: INoPlayableTrackEventPayload;
+  liveCatchUpStateChange: ILiveCatchUpUpdate;
 }
 
 /** State linked to a particular contents loaded by the public API. */

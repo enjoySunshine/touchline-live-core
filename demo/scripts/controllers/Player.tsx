@@ -371,11 +371,9 @@ function loadContent(
   contentInfo: ILoadVideoOptions,
   loadVideoOpts: ILoadVideoSettings,
 ) {
-  if (contentInfo.lowLatencyMode) {
-    playerModule.actions.enableLiveCatchUp();
-  } else {
-    playerModule.actions.disableLiveCatchUp();
-  }
+  // The player maintains its distance from the live edge on its own, even when
+  // the demo's catch-up toggle is off, so we no longer enable it automatically.
+  playerModule.actions.disableLiveCatchUp();
   playerModule.actions.setPlaybackRate(1);
   playerModule.actions.load(Object.assign({}, contentInfo, loadVideoOpts));
 }

@@ -584,6 +584,19 @@ header .right {
   padding: 2px 9px;
 }
 
+.live-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 8px;
+  font-size: 0.85rem;
+  color: #d8d8d8;
+}
+
+.live-metric {
+  white-space: nowrap;
+}
+
 .control-button:hover {
   color: #fff;
 }

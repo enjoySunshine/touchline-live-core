@@ -76,6 +76,12 @@ import type { IInitialTimeOptions } from "./utils/get_initial_time.ts";
 import getInitialTime from "./utils/get_initial_time.ts";
 import getLoadedReference from "./utils/get_loaded_reference.ts";
 import performInitialSeekAndPlay from "./utils/initial_seek_and_play.ts";
+import {
+  createLiveCatchUpReferences,
+  startLiveCatchUpController,
+  stopLiveCatchUpController,
+} from "./utils/live_catch_up_controller.ts";
+import type { ILiveCatchUpState } from "./utils/live_catch_up_controller.ts";
 import RebufferingController from "./utils/rebuffering_controller.ts";
 import StreamEventsEmitter from "./utils/stream_events_emitter/stream_events_emitter.ts";
 import listenToMediaError from "./utils/throw_on_media_error.ts";
@@ -151,6 +157,13 @@ export default class MediaSourceContentInitializer extends ContentInitializer {
   };
 
   /**
+   * Effective playback rate applied to the media element.
+   * It equals the viewer-set rate except while the live catch-up mechanism
+   * raises it to get back to the target distance from the live edge.
+   */
+  private _effectiveSpeed: SharedReference<number>;
+
+  /**
    * Create a new `MediaSourceContentInitializer`, associated to the given
    * settings.
    * @param {Object} settings
@@ -167,6 +180,7 @@ export default class MediaSourceContentInitializer extends ContentInitializer {
       pendingSinkMetrics: new Map(),
       pendingThumbnailFetching: new Map(),
     };
+    this._effectiveSpeed = new SharedReference(settings.speed.getValue());
     this._queuedCoreMessages = null;
   }
 
@@ -1702,6 +1716,20 @@ export default class MediaSourceContentInitializer extends ContentInitializer {
       },
       { clearSignal: cancelSignal, emitCurrentValue: true },
     );
+
+    // The effective playback rate (viewer-set rate, possibly raised by the
+    // live catch-up mechanism) is created first so the core playback observer
+    // can communicate it to the adaptive bitrate logic.
+    const liveCatchUpReferences = createLiveCatchUpReferences(speed);
+    this._effectiveSpeed = liveCatchUpReferences.effectiveSpeedRef;
+    cancelSignal.register(() => {
+      // Restore the viewer-set rate on the media element when the content (or
+      // its current MediaSource) is stopped/reloaded.
+      stopLiveCatchUpController(speed, liveCatchUpReferences, (rate) =>
+        playbackObserver.setPlaybackRate(rate),
+      );
+    });
+
     const corePlaybackObserver = createCorePlaybackObserver(
       playbackObserver,
       {
@@ -1710,7 +1738,7 @@ export default class MediaSourceContentInitializer extends ContentInitializer {
         manifest,
         mediaSource:
           mediaSourceInfo?.type === "main" ? mediaSourceInfo.mediaSource : null,
-        speed,
+        speed: this._effectiveSpeed,
         textDisplayer,
       },
       cancelSignal,
@@ -1719,6 +1747,28 @@ export default class MediaSourceContentInitializer extends ContentInitializer {
     if (cancelSignal.isCancelled()) {
       return null;
     }
+
+    // Keep the playback position at the same distance from the live edge than
+    // the one chosen at content start, on live contents. This runs whatever
+    // the application does and never changes the viewer-set playback rate.
+    startLiveCatchUpController(
+      {
+        manifest,
+        lowLatencyMode: this._settings.lowLatencyMode,
+        speedRef: speed,
+        playbackObserver: corePlaybackObserver,
+        seekTo: (position) => playbackObserver.setCurrentTime(position),
+        setPlaybackRate: (rate) => playbackObserver.setPlaybackRate(rate),
+        references: liveCatchUpReferences,
+      },
+      cancelSignal,
+    );
+    liveCatchUpReferences.stateRef.onUpdate(
+      (state: ILiveCatchUpState) => {
+        this.trigger("liveCatchUpStateChange", state);
+      },
+      { clearSignal: cancelSignal, emitCurrentValue: false },
+    );
 
     /**
      * Class trying to avoid various stalling situations, emitting "stalled"
